@@ -47,9 +47,9 @@ impl ThreadPerConnection {
 impl TcpConnectionStrategy for ThreadPerConnection {
 
     fn handle(&self, mut stream: TcpStream) {
-        let connection = Arc::clone(&self.active_connections);
+        let active_connection = Arc::clone(&self.active_connections);
 
-        ThreadPerConnection::open_connection(&connection, self.max_connections);
+        ThreadPerConnection::open_connection(&active_connection, self.max_connections);
 
         thread::spawn(move || {
             loop {
@@ -57,7 +57,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
                 let byte = stream.read(&mut buffer).unwrap();
 
                 if byte == 0 {
-                    ThreadPerConnection::close_connection(&connection);
+                    ThreadPerConnection::close_connection(&active_connection);
                     break;
                 }
 

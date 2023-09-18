@@ -1,6 +1,7 @@
 use std::io::{Read, Write, ErrorKind, Error};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 struct ThreadPerConnection {
@@ -40,11 +41,11 @@ impl ThreadPerConnection {
 }
 
 trait TcpConnectionStrategy {
-    fn handle(&self, stream: TcpStream) -> std::io::Result<()>;
+    fn handle(&self, stream: TcpStream, sender: Sender<[u8; 512]>) -> std::io::Result<()>;
 }
 
 impl TcpConnectionStrategy for ThreadPerConnection {
-    fn handle(&self, mut stream: TcpStream) -> std::io::Result<()> {
+    fn handle(&self, mut stream: TcpStream, sender: Sender<[u8; 512]>) -> std::io::Result<()> {
         let active_connection = Arc::clone(&self.active_connections);
 
         ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
@@ -59,8 +60,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
                     break;
                 }
 
-                // println!("{}", String::from_utf8_lossy(&buffer));
-                // stream.write(&buffer).unwrap();
+                sender.send(buffer).unwrap();
             }
         });
 
@@ -69,7 +69,8 @@ impl TcpConnectionStrategy for ThreadPerConnection {
 }
 
 struct TcpServerConfig {
-    strategy: Box<dyn TcpConnectionStrategy>
+    strategy: Box<dyn TcpConnectionStrategy>,
+    sender: Sender<[u8; 512]>
 }
 
 struct TcpServer {
@@ -89,7 +90,8 @@ impl TcpServer {
         let listener = TcpListener::bind(address)?;
 
         for stream in listener.incoming() {
-            if let Err(error) = self.config.strategy.handle(stream?) {
+            let sender = self.config.sender.clone();
+            if let Err(error) = self.config.strategy.handle(stream?, sender) {
                 println!("Error: {}", error);
             }
         }
@@ -100,8 +102,17 @@ impl TcpServer {
 
 
 fn main() {
+    let (tx, rx): (Sender<[u8; 512]>, Receiver<[u8; 512]>) = mpsc::channel();
+
+    thread::spawn(move || {
+        while let Ok(message) = rx.recv() {
+            println!("Message: {}", String::from_utf8_lossy(&message));
+        }
+    });
+
     let server = TcpServer::new(TcpServerConfig {
-        strategy: Box::new(ThreadPerConnection::new(1))
+        strategy: Box::new(ThreadPerConnection::new(1)),
+        sender: tx
     });
 
     server.listen(8080).unwrap();

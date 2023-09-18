@@ -1,11 +1,7 @@
-use std::io::{Read, Write};
+use std::io::{Read, Write, ErrorKind, Error};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
-
-trait TcpConnectionStrategy {
-    fn handle(&self, stream: TcpStream);
-}
 
 struct ThreadPerConnection {
     active_connections: Arc<Mutex<u32>>,
@@ -20,15 +16,15 @@ impl ThreadPerConnection {
         }
     }
 
-    fn open_connection(active_connections: &Arc<Mutex<u32>>, max_connections: u32) {
+    fn open_connection(active_connections: &Arc<Mutex<u32>>, max_connections: u32) -> std::io::Result<()> {
         let mut active_connections = active_connections.lock().unwrap();
 
         if *active_connections >= max_connections {
-            println!("Max connections reached");
-            return;
+            return Err(Error::new(ErrorKind::ConnectionRefused, "Max connections reached"));
         }
 
         *active_connections += 1;
+        Ok(())
     }
 
     fn close_connection(active_connections: &Arc<Mutex<u32>>) {
@@ -36,35 +32,39 @@ impl ThreadPerConnection {
 
         if *active_connections == 0 {
             println!("No connections to close");
-            return;
+            return
         }
 
         *active_connections -= 1;
-        println!("Connection #{} closed", active_connections);
     }
 }
 
-impl TcpConnectionStrategy for ThreadPerConnection {
+trait TcpConnectionStrategy {
+    fn handle(&self, stream: TcpStream) -> std::io::Result<()>;
+}
 
-    fn handle(&self, mut stream: TcpStream) {
+impl TcpConnectionStrategy for ThreadPerConnection {
+    fn handle(&self, mut stream: TcpStream) -> std::io::Result<()> {
         let active_connection = Arc::clone(&self.active_connections);
 
-        ThreadPerConnection::open_connection(&active_connection, self.max_connections);
+        ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
 
         thread::spawn(move || {
             loop {
                 let mut buffer = [0; 512];
-                let byte = stream.read(&mut buffer).unwrap();
+                let byte = stream.read(&mut buffer).expect("Failed to read from stream");
 
                 if byte == 0 {
                     ThreadPerConnection::close_connection(&active_connection);
                     break;
                 }
 
-                println!("{}", String::from_utf8_lossy(&buffer));
-                stream.write(&buffer).unwrap();
+                // println!("{}", String::from_utf8_lossy(&buffer));
+                // stream.write(&buffer).unwrap();
             }
         });
+
+        Ok(())
     }
 }
 
@@ -89,7 +89,9 @@ impl TcpServer {
         let listener = TcpListener::bind(address)?;
 
         for stream in listener.incoming() {
-            self.config.strategy.handle(stream?);
+            if let Err(error) = self.config.strategy.handle(stream?) {
+                println!("Error: {}", error);
+            }
         }
 
         Ok(())
@@ -99,7 +101,7 @@ impl TcpServer {
 
 fn main() {
     let server = TcpServer::new(TcpServerConfig {
-        strategy: Box::new(ThreadPerConnection::new(3))
+        strategy: Box::new(ThreadPerConnection::new(1))
     });
 
     server.listen(8080).unwrap();

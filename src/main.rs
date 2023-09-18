@@ -1,56 +1,70 @@
 use std::io::{Read, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 trait TcpConnectionStrategy {
-    fn handle(&self, listener: TcpListener);
+    fn handle(&self, stream: TcpStream);
 }
 
-struct ConnectionPool;
+struct ThreadPerConnection {
+    active_connections: Arc<Mutex<u32>>,
+    max_connections: u32
+}
 
-impl TcpConnectionStrategy for ConnectionPool {
-    fn handle(&self, listener: TcpListener) {
-
-        let connection = Arc::new(Mutex::new(0));
-
-        for stream in listener.incoming() {
-            let connection = Arc::clone(&connection);
-
-            {
-                let mut connection = connection.lock().unwrap();
-                if *connection > 1 {
-                    println!("Connection #{} rejected", connection);
-                    continue;
-                }
-
-                *connection += 1;
-            }
-
-            let mut stream = stream.unwrap();
-
-            thread::spawn(move || {
-                loop {
-                    let mut buffer = [0; 512];
-                    let byte = stream.read(&mut buffer).unwrap();
-
-                    if byte == 0 {
-                        let mut connection = connection.lock().unwrap();
-                        println!("Connection #{} closed", connection);
-                        *connection -= 1;
-                        break;
-                    }
-
-                    println!("{}", String::from_utf8_lossy(&buffer));
-                    stream.write(&buffer).unwrap();
-
-                    {
-                        let connection = connection.lock().unwrap();
-                        println!("Connection #{}", connection);
-                    }
-                }
-            });
+impl ThreadPerConnection {
+    fn new(max_connections: u32) -> Self {
+        ThreadPerConnection {
+            active_connections: Arc::new(Mutex::new(0)),
+            max_connections
         }
+    }
+
+    fn open_connection(active_connections: &Arc<Mutex<u32>>, max_connections: u32) {
+        let mut active_connections = active_connections.lock().unwrap();
+
+        if *active_connections >= max_connections {
+            println!("Max connections reached");
+            return;
+        }
+
+        *active_connections += 1;
+    }
+
+    fn close_connection(active_connections: &Arc<Mutex<u32>>) {
+        let mut active_connections = active_connections.lock().unwrap();
+
+        if *active_connections == 0 {
+            println!("No connections to close");
+            return;
+        }
+
+        *active_connections -= 1;
+        println!("Connection #{} closed", active_connections);
+    }
+}
+
+impl TcpConnectionStrategy for ThreadPerConnection {
+
+    fn handle(&self, mut stream: TcpStream) {
+        let connection = Arc::clone(&self.active_connections);
+
+        ThreadPerConnection::open_connection(&connection, self.max_connections);
+
+        thread::spawn(move || {
+            loop {
+                let mut buffer = [0; 512];
+                let byte = stream.read(&mut buffer).unwrap();
+
+                if byte == 0 {
+                    ThreadPerConnection::close_connection(&connection);
+                    break;
+                }
+
+                println!("{}", String::from_utf8_lossy(&buffer));
+                stream.write(&buffer).unwrap();
+            }
+        });
     }
 }
 
@@ -73,7 +87,10 @@ impl TcpServer {
         let host = "localhost";
         let address = format!("{}:{}", host, port);
         let listener = TcpListener::bind(address)?;
-        self.config.strategy.handle(listener);
+
+        for stream in listener.incoming() {
+            self.config.strategy.handle(stream?);
+        }
 
         Ok(())
     }
@@ -82,7 +99,7 @@ impl TcpServer {
 
 fn main() {
     let server = TcpServer::new(TcpServerConfig {
-        strategy: Box::new(ConnectionPool)
+        strategy: Box::new(ThreadPerConnection::new(3))
     });
 
     server.listen(8080).unwrap();

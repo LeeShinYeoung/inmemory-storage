@@ -1,5 +1,5 @@
 ### TODO LIST
 
 - TCP listener
-- Connection pool
+- Thread per connection
 - Message parser for Custom Protocol

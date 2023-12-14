@@ -21,7 +21,7 @@ impl ThreadPerConnection {
     ThreadPerConnection {
       active_connections: Arc::new(Mutex::new(0)),
       max_connections,
-      pool:Box::new(ThreadPool::new(max_connections as usize,size::mb(10))),
+      pool: Box::new(ThreadPool::new(max_connections as usize, size::mb(10))),
     }
   }
 

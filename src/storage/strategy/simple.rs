@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use super::Strategy;
+use super::{Page, Strategy};
 
 pub struct Simple {
-  map: HashMap<String, Vec<u8>>,
+  table: Box<HashMap<String, Page>>,
 }
 impl Strategy for Simple {
   fn new() -> Self
@@ -11,23 +11,27 @@ impl Strategy for Simple {
     Self: Sized,
   {
     Self {
-      map: HashMap::new(),
+      table: Box::new(HashMap::new()),
     }
   }
 
-  fn allocate(&mut self, key: &str, value: Vec<u8>) {
-    self.map.insert(key.to_string(), value);
+  fn allocate(&mut self, key: String, page: Page) -> Option<Page> {
+    self.table.insert(key, page)
   }
 
-  fn get(&mut self, key: &str) -> Option<&Vec<u8>> {
-    self.map.get(key)
+  fn get(&mut self, key: &str) -> Option<&Page> {
+    self.table.get(key)
   }
 
-  fn deallocate(&mut self, key: &str) {
-    self.map.remove(key);
+  fn deallocate(&mut self, key: &str) -> Option<Page> {
+    self.table.remove(key)
   }
 
-  fn evict(&mut self, _: usize) {
-    return;
+  fn evict(&mut self) -> Option<String> {
+    None
+  }
+
+  fn iter(&self) -> Box<dyn ExactSizeIterator<Item = (&String, &Page)> + '_> {
+    Box::new(self.table.iter())
   }
 }

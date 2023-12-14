@@ -4,11 +4,11 @@ use crate::storage::list::linked::{DoubleLinked, DoubleLinkedElement};
 
 use super::{Page, Strategy};
 
-pub struct LeastRecentUsed {
-  table: Box<HashMap<String, LeastRecentUsedPage>>,
+pub struct FirstInFirstOut {
+  table: Box<HashMap<String, FirstInFirstOutPage>>,
   queue: Box<DoubleLinked<String>>,
 }
-impl Strategy for LeastRecentUsed {
+impl Strategy for FirstInFirstOut {
   fn new() -> Self
   where
     Self: Sized,
@@ -20,17 +20,11 @@ impl Strategy for LeastRecentUsed {
   }
 
   fn get(&mut self, key: &str) -> Option<&Page> {
-    self.table.get(key).map(|page| {
-      unsafe {
-        self.queue.remove(page.element);
-        self.queue.push_back(page.element);
-      };
-      return &page.source;
-    })
+    self.table.get(key).map(|page| &page.source)
   }
 
   fn allocate(&mut self, key: String, page: Page) -> Option<Page> {
-    let page = LeastRecentUsedPage::new(key.to_owned(), page);
+    let page = FirstInFirstOutPage::new(key.to_owned(), page);
     unsafe { self.queue.push_back(page.element) };
     self.table.insert(key, page).map(|old| {
       unsafe { self.queue.remove(old.element) };
@@ -53,18 +47,18 @@ impl Strategy for LeastRecentUsed {
     Box::new(self.table.iter().map(|(k, v)| (k, &v.source)))
   }
 }
-unsafe impl Send for LeastRecentUsed {}
-unsafe impl Sync for LeastRecentUsed {}
+unsafe impl Send for FirstInFirstOut {}
+unsafe impl Sync for FirstInFirstOut {}
 
-struct LeastRecentUsedPage {
-  element: NonNull<DoubleLinkedElement<String>>,
+struct FirstInFirstOutPage {
   source: Page,
+  element: NonNull<DoubleLinkedElement<String>>,
 }
-impl LeastRecentUsedPage {
-  fn new(k: String, page: Page) -> Self {
+impl FirstInFirstOutPage {
+  fn new(key: String, v: Page) -> Self {
     Self {
-      element: DoubleLinkedElement::new_ptr(k),
-      source: page,
+      source: v,
+      element: DoubleLinkedElement::new_ptr(key),
     }
   }
 }

@@ -7,6 +7,7 @@ use std::thread;
 use tcp::strategy::thread_per_connection::ThreadPerConnection;
 use tcp::{TcpServer, TcpServerConfig};
 
+mod server;
 mod storage;
 mod tcp;
 mod thread_pool;

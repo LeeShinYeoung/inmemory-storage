@@ -1,7 +1,10 @@
 use std::{
-  io::{Error, ErrorKind, Read},
+  io::{Error, ErrorKind, Read, Write},
   net::TcpStream,
-  sync::{mpsc::Sender, Arc, Mutex},
+  sync::{
+    mpsc::{channel, Sender},
+    Arc, Mutex,
+  },
 };
 
 use crate::{storage::size, thread_pool::ThreadPool};
@@ -53,7 +56,11 @@ impl ThreadPerConnection {
 }
 
 impl TcpConnectionStrategy for ThreadPerConnection {
-  fn handle(&self, mut stream: TcpStream, sender: Sender<[u8; 512]>) -> std::io::Result<()> {
+  fn handle(
+    &self,
+    mut stream: TcpStream,
+    sender: Sender<([u8; 512], Sender<[u8; 512]>)>,
+  ) -> std::io::Result<()> {
     let active_connection = Arc::clone(&self.active_connections);
 
     ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
@@ -68,7 +75,15 @@ impl TcpConnectionStrategy for ThreadPerConnection {
         break;
       }
 
-      sender.send(buffer).unwrap();
+      let (tx, rx) = channel();
+      sender.send((buffer, tx)).unwrap();
+      while let Ok(recv) = rx.recv() {
+        match stream.write_all(&recv) {
+          Ok(_) => continue,
+          Err(_) => return,
+        }
+      }
+      stream.flush().unwrap();
     });
 
     Ok(())

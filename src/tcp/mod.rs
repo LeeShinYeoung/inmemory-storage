@@ -18,13 +18,17 @@ impl TcpServer {
     TcpServer { config }
   }
 
-  pub fn listen(&self, port: u16) -> std::io::Result<()> {
+  pub fn listen(
+    &self,
+    sender: Sender<([u8; 512], Sender<[u8; 512]>)>,
+    port: u16,
+  ) -> std::io::Result<()> {
     let host = "localhost";
     let address = format!("{}:{}", host, port);
     let listener = TcpListener::bind(address)?;
 
     for stream in listener.incoming() {
-      let sender = self.config.sender.clone();
+      // let sender = self.config.sender.clone();
       if let Err(error) = self.config.strategy.handle(stream?, sender) {
         println!("Error: {}", error);
       }

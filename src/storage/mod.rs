@@ -52,8 +52,8 @@ impl Storage {
       s.get(key).map(|page| page.clone())
     } {
       if page.is_expired() {
-        let mut a = self.allocated.lock().unwrap();
         let mut s = self.strategy.lock().unwrap();
+        let mut a = self.allocated.lock().unwrap();
         *a -= s.deallocate(&key).map(|old| old.size()).unwrap_or(0);
         return Err(Error::from(ErrorKind::NotFound));
       }

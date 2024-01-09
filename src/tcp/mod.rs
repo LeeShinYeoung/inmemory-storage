@@ -6,7 +6,7 @@ pub mod strategy;
 
 pub struct TcpServerConfig {
   pub(crate) strategy: Box<dyn TcpConnectionStrategy>,
-  pub sender: Sender<[u8; 512]>,
+  // pub sender: Sender<[u8; 512]>,
 }
 
 pub struct TcpServer {
@@ -29,6 +29,7 @@ impl TcpServer {
 
     for stream in listener.incoming() {
       // let sender = self.config.sender.clone();
+      let sender = sender.clone();
       if let Err(error) = self.config.strategy.handle(stream?, sender) {
         println!("Error: {}", error);
       }

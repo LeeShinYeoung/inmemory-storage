@@ -12,9 +12,17 @@ pub struct Request {
   pub value: Vec<u8>,
 }
 
-struct Response {}
+pub struct Response {
+  pub code: ResponseCode,
+  pub value: Vec<u8>,
+}
 
-pub fn parse(message: [u8; 512]) -> Request {
+pub enum ResponseCode {
+  Success = 0,
+  Fail = 1,
+}
+
+pub fn decode(message: [u8; 512]) -> Request {
   let method = message[0];
   let key_length = message[1] as usize;
   let key = &message[2..2 + key_length];
@@ -35,4 +43,13 @@ pub fn parse(message: [u8; 512]) -> Request {
   }
 }
 
-pub fn serialize() {}
+pub fn encode(response: Response) -> [u8; 512] {
+  let code = response.code as u8;
+  let value_length = response.value.len();
+
+  let mut buffer = [0; 512];
+  buffer[0] = code;
+  buffer[1] = value_length as u8;
+  buffer[2..2 + value_length].copy_from_slice(&response.value[..]);
+  buffer
+}

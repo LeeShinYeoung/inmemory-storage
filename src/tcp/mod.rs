@@ -1,5 +1,7 @@
 use std::{net::TcpListener, sync::mpsc::Sender};
 
+use crate::protocol::{Request, Response};
+
 use self::strategy::TcpConnectionStrategy;
 
 pub mod strategy;
@@ -20,7 +22,7 @@ impl TcpServer {
 
   pub fn listen(
     &self,
-    sender: Sender<([u8; 512], Sender<[u8; 512]>)>,
+    sender: Sender<(Request, Sender<Response>)>,
     port: u16,
   ) -> std::io::Result<()> {
     let host = "localhost";

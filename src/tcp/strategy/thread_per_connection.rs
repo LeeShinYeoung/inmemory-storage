@@ -7,7 +7,11 @@ use std::{
   },
 };
 
-use crate::{storage::size, thread_pool::ThreadPool};
+use crate::{
+  protocol::{decode, encode, Request, Response},
+  storage::size,
+  thread_pool::ThreadPool,
+};
 
 use super::TcpConnectionStrategy;
 
@@ -59,7 +63,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
   fn handle(
     &self,
     mut stream: TcpStream,
-    sender: Sender<([u8; 512], Sender<[u8; 512]>)>,
+    sender: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()> {
     let active_connection = Arc::clone(&self.active_connections);
 
@@ -76,9 +80,12 @@ impl TcpConnectionStrategy for ThreadPerConnection {
       }
 
       let (tx, rx) = channel();
-      sender.send((buffer, tx)).unwrap();
+
+      let request = decode(buffer);
+      sender.send((request, tx)).unwrap();
       while let Ok(recv) = rx.recv() {
-        match stream.write_all(&recv) {
+        let buffer = encode(recv);
+        match stream.write_all(&buffer) {
           Ok(_) => continue,
           Err(_) => return,
         }

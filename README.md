@@ -3,17 +3,17 @@
 - [ ] TCP Server
   - [x] Thread Per Connection
   - [x] Protocol Specification
-  - [ ] Protocol Parser
-  - [ ] Error handler
+  - [x] Protocol Parser
+  - [ ] Router
     - [ ] Response Message
 - [ ] Message Handler
-  - [ ] Single Thread Channel
+  - [x] Single Thread Channel
   - [ ] Storage
     - [x] Lifecycle
       - [x] Page Replacement Algorithm
         - [x] NONE
         - [x] LRU
-      - [ ] TTL
+      - [x] TTL
     - [x] Double Linked List + HaspMap
 - [ ] Settings
   - [ ] settings.toml

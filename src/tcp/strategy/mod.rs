@@ -3,12 +3,14 @@ use std::{
   sync::mpsc::{Receiver, Sender},
 };
 
+use crate::protocol::{Request, Response};
+
 pub mod thread_per_connection;
 
 pub trait TcpConnectionStrategy {
   fn handle(
     &self,
     stream: TcpStream,
-    sender: Sender<([u8; 512], Sender<[u8; 512]>)>,
+    sender: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()>;
 }

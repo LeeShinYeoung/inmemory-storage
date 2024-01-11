@@ -7,7 +7,7 @@ use std::sync::{
 };
 
 use crate::{
-  protocol::parse,
+  protocol::{Request, Response, ResponseCode},
   storage::size::{self, mb},
   // storage::{size::mb, Storage},
   tcp::{strategy::thread_per_connection::ThreadPerConnection, TcpServer, TcpServerConfig},
@@ -31,16 +31,20 @@ impl Server {
   }
 
   pub fn start(&self) -> std::io::Result<()> {
-    let (tx, rx) = channel::<([u8; 512], Sender<[u8; 512]>)>();
+    let (tx, rx) = channel::<(Request, Sender<Response>)>();
     // let cs = Arc::clone(&self.storage);
     self.background.schedule(move || {
       while let Ok((msg, res)) = rx.recv() {
-        let request = parse(msg);
-        println!("{:?}", request.method);
-        println!("{:?}", String::from_utf8_lossy(&request.key));
-        println!("{:?}", String::from_utf8_lossy(&request.value));
+        println!("{:?}", msg.method);
+        println!("{:?}", String::from_utf8_lossy(&msg.key));
+        println!("{:?}", String::from_utf8_lossy(&msg.value));
 
-        res.send(msg).unwrap();
+        let response = Response {
+          code: ResponseCode::Success,
+          value: msg.value,
+        };
+
+        res.send(response).unwrap();
       }
     });
 

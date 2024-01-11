@@ -8,8 +8,8 @@ pub enum Method {
 #[derive(Debug)]
 pub struct Request {
   pub method: Method,
-  pub key: Box<[u8]>,
-  pub value: Box<[u8]>,
+  pub key: Vec<u8>,
+  pub value: Vec<u8>,
 }
 
 struct Response {}
@@ -30,8 +30,8 @@ pub fn parse(message: [u8; 512]) -> Request {
 
   Request {
     method,
-    key: key.to_vec().into_boxed_slice(),
-    value: value.to_vec().into_boxed_slice(),
+    key: key.to_vec(),
+    value: value.to_vec(),
   }
 }
 

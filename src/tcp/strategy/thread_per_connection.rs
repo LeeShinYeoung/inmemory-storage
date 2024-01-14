@@ -82,26 +82,23 @@ impl TcpConnectionStrategy for ThreadPerConnection {
     ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
 
     self.pool.schedule(move || loop {
-      // let mut buffer = [0; 512];
       let mut raw_request = RawRequest::new();
-      // println!("raw_request: {:#?}", raw_request);
+
       let mut buffer = [0; 512];
       let byte = stream
         // .read(&mut raw_request.data)
         .read(&mut buffer)
         .expect("Failed to read from stream");
 
-      println!("{:?} : buffer", buffer);
-
       if byte == 0 {
         ThreadPerConnection::close_connection(&active_connection);
         break;
       }
 
+      raw_request.data = buffer;
+
       let (sender_to_client, receiver_from_handler) = channel();
 
-      println!("handler - {:?}", raw_request);
-      // let request = decode(buffer);
       sender_to_handler
         .send((raw_request, sender_to_client))
         .unwrap();

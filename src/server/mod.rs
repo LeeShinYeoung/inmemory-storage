@@ -29,23 +29,10 @@ impl Server {
     }
   }
 
-  // handler 시작
   pub fn start(&self) -> std::io::Result<()> {
-    // 각각의 client와 하나의 handler를 연결하는 tx, rx 생성 (1번만 생성하고, tx는 복제하여 각각의 client로 전달)
     let (sender_to_handler, receiver_from_client) = channel::<(RawRequest, Sender<Response>)>();
     self.background.schedule(move || {
       while let Ok((raw_request, sender_to_client)) = receiver_from_client.recv() {
-        //
-        // println!("{:?}", request.method);
-        // println!("{:?}", String::from_utf8_lossy(&request.key));
-        // println!("{:?}", String::from_utf8_lossy(&request.value));
-        //
-        // let response = Response {
-        //   code: ResponseCode::Success,
-        //   value: request.value,
-        // };
-
-        println!("server.start - {:?}", raw_request);
 
         let temp_handler = TempHandler::new();
         match TcpRouter::handle(raw_request, temp_handler) {

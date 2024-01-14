@@ -84,10 +84,8 @@ impl TcpConnectionStrategy for ThreadPerConnection {
     self.pool.schedule(move || loop {
       let mut raw_request = RawRequest::new();
 
-      let mut buffer = [0; 512];
       let byte = stream
-        // .read(&mut raw_request.data)
-        .read(&mut buffer)
+        .read(&mut raw_request.data)
         .expect("Failed to read from stream");
 
       if byte == 0 {
@@ -95,13 +93,12 @@ impl TcpConnectionStrategy for ThreadPerConnection {
         break;
       }
 
-      raw_request.data = buffer;
-
       let (sender_to_client, receiver_from_handler) = channel();
 
       sender_to_handler
         .send((raw_request, sender_to_client))
         .unwrap();
+
       while let Ok(response) = receiver_from_handler.recv() {
         let buffer = encode(response);
         match stream.write_all(&buffer) {
@@ -109,6 +106,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
           Err(_) => return,
         }
       }
+
       stream.flush().unwrap();
     });
 

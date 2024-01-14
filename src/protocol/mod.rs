@@ -14,11 +14,13 @@ pub struct Request {
   pub value: Vec<u8>,
 }
 
+#[derive(Debug)]
 pub struct Response {
   pub code: ResponseCode,
   pub value: Vec<u8>,
 }
 
+#[derive(Debug)]
 pub enum ResponseCode {
   Success = 0,
   Fail = 1,
@@ -55,5 +57,6 @@ pub fn encode(response: Response) -> [u8; 512] {
   buffer[0] = code;
   buffer[1] = value_length as u8;
   buffer[2..2 + value_length].copy_from_slice(&response.value[..]);
+
   buffer
 }

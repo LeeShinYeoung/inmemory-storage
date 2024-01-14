@@ -1,3 +1,5 @@
+use crate::tcp::strategy::thread_per_connection::RawRequest;
+
 #[derive(Debug)]
 pub enum Method {
   Get,
@@ -22,7 +24,9 @@ pub enum ResponseCode {
   Fail = 1,
 }
 
-pub fn decode(message: [u8; 512]) -> Request {
+pub fn decode(raw_request: RawRequest) -> Request {
+  let message = raw_request.data;
+
   let method = message[0];
   let key_length = message[1] as usize;
   let key = &message[2..2 + key_length];

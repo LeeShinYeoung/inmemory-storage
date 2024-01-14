@@ -1,6 +1,7 @@
 use std::{net::TcpListener, sync::mpsc::Sender};
 
 use crate::protocol::{Request, Response};
+use crate::tcp::strategy::thread_per_connection::RawRequest;
 
 use self::strategy::TcpConnectionStrategy;
 
@@ -22,7 +23,7 @@ impl TcpServer {
 
   pub fn listen(
     &self,
-    sender: Sender<(Request, Sender<Response>)>,
+    sender_to_handler: Sender<(RawRequest, Sender<Response>)>,
     port: u16,
   ) -> std::io::Result<()> {
     let host = "localhost";
@@ -30,9 +31,8 @@ impl TcpServer {
     let listener = TcpListener::bind(address)?;
 
     for stream in listener.incoming() {
-      // let sender = self.config.sender.clone();
-      let sender = sender.clone();
-      if let Err(error) = self.config.strategy.handle(stream?, sender) {
+      let sender_to_handler = sender_to_handler.clone();
+      if let Err(error) = self.config.strategy.handle(stream?, sender_to_handler) {
         println!("Error: {}", error);
       }
     }

@@ -1,11 +1,11 @@
 mod config;
 mod router;
 
-use std::sync::{
-  mpsc::{channel, Sender},
-  Arc, Mutex,
-};
+use std::io::ErrorKind;
+use std::sync::mpsc::{channel, Sender};
 
+use crate::server::router::{Handler, TcpRouter, TempHandler};
+use crate::tcp::strategy::thread_per_connection::RawRequest;
 use crate::{
   protocol::{Request, Response, ResponseCode},
   storage::size::{self, mb},
@@ -26,28 +26,37 @@ impl Server {
         strategy: Box::new(ThreadPerConnection::new(5)),
       }),
       background: ThreadPool::new(5, size::mb(10)),
-      // storage: Arc::new(Mutex::new(Storage::new(size, str)))
     }
   }
 
+  // handler 시작
   pub fn start(&self) -> std::io::Result<()> {
-    let (tx, rx) = channel::<(Request, Sender<Response>)>();
-    // let cs = Arc::clone(&self.storage);
+    // 각각의 client와 하나의 handler를 연결하는 tx, rx 생성 (1번만 생성하고, tx는 복제하여 각각의 client로 전달)
+    let (sender_to_handler, receiver_from_client) = channel::<(RawRequest, Sender<Response>)>();
     self.background.schedule(move || {
-      while let Ok((msg, res)) = rx.recv() {
-        println!("{:?}", msg.method);
-        println!("{:?}", String::from_utf8_lossy(&msg.key));
-        println!("{:?}", String::from_utf8_lossy(&msg.value));
+      while let Ok((raw_request, sender_to_client)) = receiver_from_client.recv() {
+        //
+        // println!("{:?}", request.method);
+        // println!("{:?}", String::from_utf8_lossy(&request.key));
+        // println!("{:?}", String::from_utf8_lossy(&request.value));
+        //
+        // let response = Response {
+        //   code: ResponseCode::Success,
+        //   value: request.value,
+        // };
 
-        let response = Response {
-          code: ResponseCode::Success,
-          value: msg.value,
+        println!("server.start - {:?}", raw_request);
+
+        let temp_handler = TempHandler::new();
+        match TcpRouter::handle(raw_request, temp_handler) {
+          Ok(response) => {
+            sender_to_client.send(response).unwrap();
+          }
+          Err(error) => panic!("Error: {:#?}", error),
         };
-
-        res.send(response).unwrap();
       }
     });
 
-    self.transport.listen(tx, 8080)
+    self.transport.listen(sender_to_handler, 8080)
   }
 }

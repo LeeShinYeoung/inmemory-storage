@@ -59,32 +59,54 @@ impl ThreadPerConnection {
   }
 }
 
+#[derive(Debug)]
+pub struct RawRequest {
+  pub data: [u8; 512],
+}
+
+impl RawRequest {
+  fn new() -> Self {
+    RawRequest { data: [0; 512] }
+  }
+}
+
+// client
 impl TcpConnectionStrategy for ThreadPerConnection {
   fn handle(
     &self,
     mut stream: TcpStream,
-    sender: Sender<(Request, Sender<Response>)>,
+    sender_to_handler: Sender<(RawRequest, Sender<Response>)>,
   ) -> std::io::Result<()> {
     let active_connection = Arc::clone(&self.active_connections);
 
     ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
+
     self.pool.schedule(move || loop {
+      // let mut buffer = [0; 512];
+      let mut raw_request = RawRequest::new();
+      // println!("raw_request: {:#?}", raw_request);
       let mut buffer = [0; 512];
       let byte = stream
+        // .read(&mut raw_request.data)
         .read(&mut buffer)
         .expect("Failed to read from stream");
+
+      println!("{:?} : buffer", buffer);
 
       if byte == 0 {
         ThreadPerConnection::close_connection(&active_connection);
         break;
       }
 
-      let (tx, rx) = channel();
+      let (sender_to_client, receiver_from_handler) = channel();
 
-      let request = decode(buffer);
-      sender.send((request, tx)).unwrap();
-      while let Ok(recv) = rx.recv() {
-        let buffer = encode(recv);
+      println!("handler - {:?}", raw_request);
+      // let request = decode(buffer);
+      sender_to_handler
+        .send((raw_request, sender_to_client))
+        .unwrap();
+      while let Ok(response) = receiver_from_handler.recv() {
+        let buffer = encode(response);
         match stream.write_all(&buffer) {
           Ok(_) => continue,
           Err(_) => return,

@@ -30,12 +30,12 @@ impl Server {
   }
 
   pub fn start(&self) -> std::io::Result<()> {
-    let (sender_to_handler, receiver_from_client) = channel::<(RawRequest, Sender<Response>)>();
+    let (sender_to_handler, receiver_from_client) = channel::<(Request, Sender<Response>)>();
     self.background.schedule(move || {
-      while let Ok((raw_request, sender_to_client)) = receiver_from_client.recv() {
+      while let Ok((request, sender_to_client)) = receiver_from_client.recv() {
 
         let temp_handler = TempHandler::new();
-        match TcpRouter::handle(raw_request, temp_handler) {
+        match TcpRouter::handle(request, temp_handler) {
           Ok(response) => {
             sender_to_client.send(response).unwrap();
           }

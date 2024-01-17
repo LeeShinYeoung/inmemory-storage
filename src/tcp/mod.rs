@@ -23,7 +23,7 @@ impl TcpServer {
 
   pub fn listen(
     &self,
-    sender_to_handler: Sender<(RawRequest, Sender<Response>)>,
+    sender_to_handler: Sender<(Request, Sender<Response>)>,
     port: u16,
   ) -> std::io::Result<()> {
     let host = "localhost";

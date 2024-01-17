@@ -36,8 +36,7 @@ impl Handler for TempHandler {
 pub struct TcpRouter {}
 
 impl TcpRouter {
-  pub fn handle(raw_request: RawRequest, handler: Box<dyn Handler>) -> Result<Response, ErrorKind> {
-    let request = decode(raw_request);
+  pub fn handle(request: Request, handler: Box<dyn Handler>) -> Result<Response, ErrorKind> {
     let request_value = request.value.clone();
     let result = handler.handle(request);
     match result {

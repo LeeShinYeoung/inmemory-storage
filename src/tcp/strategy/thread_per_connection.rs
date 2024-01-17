@@ -75,7 +75,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
   fn handle(
     &self,
     mut stream: TcpStream,
-    sender_to_handler: Sender<(RawRequest, Sender<Response>)>,
+    sender_to_handler: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()> {
     let active_connection = Arc::clone(&self.active_connections);
 
@@ -93,15 +93,17 @@ impl TcpConnectionStrategy for ThreadPerConnection {
         break;
       }
 
+      let request = decode(raw_request);
+
       let (sender_to_client, receiver_from_handler) = channel();
 
       sender_to_handler
-        .send((raw_request, sender_to_client))
+        .send((request, sender_to_client))
         .unwrap();
 
       while let Ok(response) = receiver_from_handler.recv() {
-        let buffer = encode(response);
-        match stream.write_all(&buffer) {
+        let response_buffer = encode(response);
+        match stream.write_all(&response_buffer) {
           Ok(_) => continue,
           Err(_) => return,
         }

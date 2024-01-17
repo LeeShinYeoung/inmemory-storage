@@ -9,6 +9,6 @@ pub trait TcpConnectionStrategy {
   fn handle(
     &self,
     stream: TcpStream,
-    sender_to_handler: Sender<(RawRequest, Sender<Response>)>,
+    sender_to_handler: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()>;
 }

@@ -1,55 +1,48 @@
-use crate::protocol::{decode, encode, Request, Response, ResponseCode};
-use crate::tcp::strategy::thread_per_connection::RawRequest;
-use std::io::ErrorKind;
-use std::sync::mpsc::Sender;
+use std::io::{Error, ErrorKind};
+use crate::protocol::{Method, Request, Response, ResponseCode};
+use crate::storage::{MaxMemoryStrategy, Storage};
 
-pub trait Handler {
-  fn new() -> Box<Self>
-  where
-    Self: Sized;
-  fn handle(&self, request: Request) -> Result<Response, ErrorKind>;
-}
+pub struct RequestRouter {}
 
-pub struct TempHandler {}
+impl RequestRouter {
+  pub fn handle(request: Request) -> Result<Response, ErrorKind> {
+    let Request {method, key, value} = request;
 
-impl Handler for TempHandler {
-  fn new() -> Box<Self>
-  where
-    Self: Sized,
-  {
-    Box::new(TempHandler {})
-  }
-  fn handle(&self, request: Request) -> Result<Response, ErrorKind> {
-    println!("{:?}", request.method);
-    println!("{:?}", String::from_utf8_lossy(&request.key));
-    println!("{:?}", String::from_utf8_lossy(&request.value));
+    println!("{:?}", &method);
+    println!("{:?}", String::from_utf8_lossy(&key));
+    println!("{:?}", String::from_utf8_lossy(&value));
 
-    let response = Response {
-      code: ResponseCode::Success,
-      value: request.value,
+    let mut storage = Storage::new(512, MaxMemoryStrategy::TimeToLive);
+
+    let result = match method {
+      Method::Get => {
+        storage.get(&String::from_utf8(key).unwrap())
+      },
+      Method::Set => {
+        let s = storage.put(String::from_utf8(key).unwrap(), value.clone(), Some(100));
+        Ok(vec![1])
+      },
+      Method::Delete => {
+        storage.del(&String::from_utf8(key).unwrap());
+        Ok(vec![1])
+      },
+      _ => {
+        Err(Error::new(ErrorKind::InvalidInput, "Invalid method"))
+      }
     };
 
-    Ok(response)
-  }
-}
 
-pub struct TcpRouter {}
-
-impl TcpRouter {
-  pub fn handle(request: Request, handler: Box<dyn Handler>) -> Result<Response, ErrorKind> {
-    let request_value = request.value.clone();
-    let result = handler.handle(request);
     match result {
       Ok(_) => {
         let response = Response {
           code: ResponseCode::Success,
-          value: request_value,
+          value,
         };
         Ok(response)
       }
       Err(error) => {
         println!("Error: {:#?}", error);
-        Err(error)
+        Err(error.kind())
       }
     }
   }

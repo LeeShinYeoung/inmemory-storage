@@ -1,5 +1,4 @@
 use server::Server;
-use std::io::{Read, Write};
 
 mod protocol;
 mod server;

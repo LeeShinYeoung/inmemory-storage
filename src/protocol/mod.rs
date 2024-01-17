@@ -1,10 +1,19 @@
-use crate::tcp::strategy::thread_per_connection::RawRequest;
-
 #[derive(Debug)]
 pub enum Method {
   Get,
   Set,
   Delete,
+}
+
+#[derive(Debug)]
+pub struct RawRequest {
+  pub value: [u8; 512],
+}
+
+impl RawRequest {
+  pub fn new() -> Self {
+    RawRequest { value: [0; 512] }
+  }
 }
 
 #[derive(Debug)]
@@ -27,13 +36,15 @@ pub enum ResponseCode {
 }
 
 pub fn decode(raw_request: RawRequest) -> Request {
-  let message = raw_request.data;
+  let message = raw_request.value;
 
   let method = message[0];
   let key_length = message[1] as usize;
   let key = &message[2..2 + key_length];
   let value_length = message[2 + key_length] as usize;
   let value = &message[3 + key_length..3 + key_length + value_length];
+
+  println!("{:?}", method);
 
   let method = match method {
     0 => Method::Get,

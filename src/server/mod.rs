@@ -1,13 +1,11 @@
 mod config;
 mod router;
 
-use std::io::ErrorKind;
 use std::sync::mpsc::{channel, Sender};
 
-use crate::server::router::{Handler, TcpRouter, TempHandler};
-use crate::tcp::strategy::thread_per_connection::RawRequest;
+use crate::server::router::{ RequestRouter};
 use crate::{
-  protocol::{Request, Response, ResponseCode},
+  protocol::{Request, Response},
   storage::size::{self, mb},
   // storage::{size::mb, Storage},
   tcp::{strategy::thread_per_connection::ThreadPerConnection, TcpServer, TcpServerConfig},
@@ -34,8 +32,7 @@ impl Server {
     self.background.schedule(move || {
       while let Ok((request, sender_to_client)) = receiver_from_client.recv() {
 
-        let temp_handler = TempHandler::new();
-        match TcpRouter::handle(request, temp_handler) {
+        match RequestRouter::handle(request) {
           Ok(response) => {
             sender_to_client.send(response).unwrap();
           }

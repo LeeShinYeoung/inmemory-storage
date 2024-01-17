@@ -1,7 +1,6 @@
 use std::{net::TcpListener, sync::mpsc::Sender};
 
 use crate::protocol::{Request, Response};
-use crate::tcp::strategy::thread_per_connection::RawRequest;
 
 use self::strategy::TcpConnectionStrategy;
 

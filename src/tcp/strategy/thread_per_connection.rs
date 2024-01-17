@@ -12,6 +12,7 @@ use crate::{
   storage::size,
   thread_pool::ThreadPool,
 };
+use crate::protocol::RawRequest;
 
 use super::TcpConnectionStrategy;
 
@@ -59,16 +60,7 @@ impl ThreadPerConnection {
   }
 }
 
-#[derive(Debug)]
-pub struct RawRequest {
-  pub data: [u8; 512],
-}
 
-impl RawRequest {
-  fn new() -> Self {
-    RawRequest { data: [0; 512] }
-  }
-}
 
 // client
 impl TcpConnectionStrategy for ThreadPerConnection {
@@ -85,7 +77,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
       let mut raw_request = RawRequest::new();
 
       let byte = stream
-        .read(&mut raw_request.data)
+        .read(&mut raw_request.value)
         .expect("Failed to read from stream");
 
       if byte == 0 {

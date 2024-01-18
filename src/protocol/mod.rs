@@ -44,8 +44,6 @@ pub fn decode(raw_request: RawRequest) -> Request {
   let value_length = message[2 + key_length] as usize;
   let value = &message[3 + key_length..3 + key_length + value_length];
 
-  println!("{:?}", method);
-
   let method = match method {
     0 => Method::Get,
     1 => Method::Set,

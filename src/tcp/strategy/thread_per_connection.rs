@@ -7,12 +7,12 @@ use std::{
   },
 };
 
+use crate::protocol::RawRequest;
 use crate::{
   protocol::{decode, encode, Request, Response},
   storage::size,
   thread_pool::ThreadPool,
 };
-use crate::protocol::RawRequest;
 
 use super::TcpConnectionStrategy;
 
@@ -60,8 +60,6 @@ impl ThreadPerConnection {
   }
 }
 
-
-
 // client
 impl TcpConnectionStrategy for ThreadPerConnection {
   fn handle(
@@ -89,9 +87,7 @@ impl TcpConnectionStrategy for ThreadPerConnection {
 
       let (sender_to_client, receiver_from_handler) = channel();
 
-      sender_to_handler
-        .send((request, sender_to_client))
-        .unwrap();
+      sender_to_handler.send((request, sender_to_client)).unwrap();
 
       while let Ok(response) = receiver_from_handler.recv() {
         let response_buffer = encode(response);

@@ -113,7 +113,10 @@ impl Storage {
         let keys: Vec<String> = {
           let s = c.lock().unwrap();
           let iter = s.iter();
-          let rand = thread_rng().gen_range(0..iter.len().checked_sub(20).unwrap_or(0));
+          if iter.len() == 0 {
+            continue;
+          }
+          let rand = thread_rng().gen_range(0..iter.len().checked_sub(20).unwrap_or(iter.len()));
           iter
             .filter(|(_, p)| p.has_expiry())
             .skip(rand)

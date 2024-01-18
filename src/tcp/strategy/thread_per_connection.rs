@@ -7,6 +7,7 @@ use std::{
   },
 };
 
+use crate::protocol::RawRequest;
 use crate::{
   protocol::{decode, encode, Request, Response},
   storage::size,
@@ -59,19 +60,22 @@ impl ThreadPerConnection {
   }
 }
 
+// client
 impl TcpConnectionStrategy for ThreadPerConnection {
   fn handle(
     &self,
     mut stream: TcpStream,
-    sender: Sender<(Request, Sender<Response>)>,
+    sender_to_handler: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()> {
     let active_connection = Arc::clone(&self.active_connections);
 
     ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
+
     self.pool.schedule(move || loop {
-      let mut buffer = [0; 512];
+      let mut raw_request = RawRequest::new();
+
       let byte = stream
-        .read(&mut buffer)
+        .read(&mut raw_request.value)
         .expect("Failed to read from stream");
 
       if byte == 0 {
@@ -79,17 +83,20 @@ impl TcpConnectionStrategy for ThreadPerConnection {
         break;
       }
 
-      let (tx, rx) = channel();
+      let request = decode(raw_request);
 
-      let request = decode(buffer);
-      sender.send((request, tx)).unwrap();
-      while let Ok(recv) = rx.recv() {
-        let buffer = encode(recv);
-        match stream.write_all(&buffer) {
+      let (sender_to_client, receiver_from_handler) = channel();
+
+      sender_to_handler.send((request, sender_to_client)).unwrap();
+
+      while let Ok(response) = receiver_from_handler.recv() {
+        let response_buffer = encode(response);
+        match stream.write_all(&response_buffer) {
           Ok(_) => continue,
           Err(_) => return,
         }
       }
+
       stream.flush().unwrap();
     });
 

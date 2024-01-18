@@ -1,15 +1,13 @@
 mod config;
 mod router;
 
-use std::sync::{
-  mpsc::{channel, Sender},
-  Arc, Mutex,
-};
+use std::sync::mpsc::{channel, Sender};
 
+use crate::protocol::ResponseCode;
+use crate::server::router::RequestRouter;
 use crate::{
-  protocol::{Request, Response, ResponseCode},
-  storage::size::{self, mb},
-  // storage::{size::mb, Storage},
+  protocol::{Request, Response},
+  storage::size::{self},
   tcp::{strategy::thread_per_connection::ThreadPerConnection, TcpServer, TcpServerConfig},
   thread_pool::ThreadPool,
 };
@@ -17,7 +15,6 @@ use crate::{
 pub struct Server {
   transport: TcpServer,
   background: ThreadPool,
-  // storage: Arc<Mutex<Storage>>,
 }
 impl Server {
   pub fn new() -> Self {
@@ -26,28 +23,30 @@ impl Server {
         strategy: Box::new(ThreadPerConnection::new(5)),
       }),
       background: ThreadPool::new(5, size::mb(10)),
-      // storage: Arc::new(Mutex::new(Storage::new(size, str)))
     }
   }
 
   pub fn start(&self) -> std::io::Result<()> {
-    let (tx, rx) = channel::<(Request, Sender<Response>)>();
-    // let cs = Arc::clone(&self.storage);
+    let (sender_to_handler, receiver_from_client) = channel::<(Request, Sender<Response>)>();
     self.background.schedule(move || {
-      while let Ok((msg, res)) = rx.recv() {
-        println!("{:?}", msg.method);
-        println!("{:?}", String::from_utf8_lossy(&msg.key));
-        println!("{:?}", String::from_utf8_lossy(&msg.value));
-
-        let response = Response {
-          code: ResponseCode::Success,
-          value: msg.value,
+      let mut router = RequestRouter::new();
+      while let Ok((request, sender_to_client)) = receiver_from_client.recv() {
+        match router.handle(request) {
+          Ok(response) => {
+            sender_to_client.send(response).unwrap();
+          }
+          Err(error) => {
+            sender_to_client
+              .send(Response {
+                code: ResponseCode::Fail,
+                value: error.to_string().into_bytes(),
+              })
+              .unwrap();
+          }
         };
-
-        res.send(response).unwrap();
       }
     });
 
-    self.transport.listen(tx, 8080)
+    self.transport.listen(sender_to_handler, 8080)
   }
 }

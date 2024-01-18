@@ -1,7 +1,4 @@
-use std::{
-  net::TcpStream,
-  sync::mpsc::{Receiver, Sender},
-};
+use std::{net::TcpStream, sync::mpsc::Sender};
 
 use crate::protocol::{Request, Response};
 
@@ -11,6 +8,6 @@ pub trait TcpConnectionStrategy {
   fn handle(
     &self,
     stream: TcpStream,
-    sender: Sender<(Request, Sender<Response>)>,
+    sender_to_handler: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()>;
 }

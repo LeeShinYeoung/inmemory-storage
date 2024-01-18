@@ -1,14 +1,15 @@
 ### Todo List
 
-- [ ] TCP Server
+- [x] TCP Server
   - [x] Thread Per Connection
   - [x] Protocol Specification
   - [x] Protocol Parser
-  - [ ] Router
-    - [ ] Response Message
-- [ ] Message Handler
+  - [x] Router
+    - [x] Response Message
+    - [x] Error
+- [x] Message Handler
   - [x] Single Thread Channel
-  - [ ] Storage
+  - [x] Storage
     - [x] Lifecycle
       - [x] Page Replacement Algorithm
         - [x] NONE

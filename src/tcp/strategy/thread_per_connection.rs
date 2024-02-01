@@ -7,7 +7,7 @@ use std::{
   },
 };
 
-use crate::protocol::RawRequest;
+use crate::protocol::{ProtocolParser, RawRequest, BufferedBytes};
 use crate::{
   protocol::{decode, encode, Request, Response},
   storage::size,
@@ -71,20 +71,25 @@ impl TcpConnectionStrategy for ThreadPerConnection {
 
     ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
 
+    let buffered_bytes = BufferedBytes::new(stream.try_clone().unwrap());
+    let mut protocol_parser = ProtocolParser { bytes: buffered_bytes };
+
     self.pool.schedule(move || loop {
-      let mut raw_request = RawRequest::new();
+      // let mut raw_request = RawRequest::new();
+      //
+      // let byte = stream
+      //   .read(&mut raw_request.value)
+      //   .expect("Failed to read from stream");
+      //
+      // if byte == 0 {
+      //   ThreadPerConnection::close_connection(&active_connection);
+      //   break;
+      // }
+      //
+      // let request = decode(raw_request);
+      let request = protocol_parser.decode().unwrap();
 
-      let byte = stream
-        .read(&mut raw_request.value)
-        .expect("Failed to read from stream");
-
-      if byte == 0 {
-        ThreadPerConnection::close_connection(&active_connection);
-        break;
-      }
-
-      let request = decode(raw_request);
-
+      println!("Request: {:?}", request);
       let (sender_to_client, receiver_from_handler) = channel();
 
       sender_to_handler.send((request, sender_to_client)).unwrap();

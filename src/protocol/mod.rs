@@ -2,7 +2,8 @@ mod bytes;
 mod error;
 pub use error::*;
 
-use self::bytes::BufferedBytes;
+pub use self::bytes::BufferedBytes;
+
 
 #[derive(Debug)]
 pub enum Method {
@@ -87,7 +88,7 @@ pub fn encode(response: Response) -> [u8; 512] {
   buffer
 }
 pub struct ProtocolParser {
-  bytes: BufferedBytes,
+  pub(crate) bytes: BufferedBytes,
 }
 impl ProtocolParser {
   pub fn encode(&mut self, response: Response) {

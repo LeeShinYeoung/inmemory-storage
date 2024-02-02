@@ -7,7 +7,7 @@ use std::{
   },
 };
 
-use crate::protocol::{ProtocolParser, RawRequest, BufferedBytes};
+use crate::protocol::{BufferedStream, ProtocolParser, RawRequest};
 use crate::{
   protocol::{decode, encode, Request, Response},
   storage::size,
@@ -71,8 +71,10 @@ impl TcpConnectionStrategy for ThreadPerConnection {
 
     ThreadPerConnection::open_connection(&active_connection, self.max_connections)?;
 
-    let buffered_bytes = BufferedBytes::new(stream.try_clone().unwrap());
-    let mut protocol_parser = ProtocolParser { bytes: buffered_bytes };
+    let buffered_bytes = BufferedStream::new(stream);
+    let mut protocol_parser = ProtocolParser {
+      stream: buffered_bytes,
+    };
 
     self.pool.schedule(move || loop {
       // let mut raw_request = RawRequest::new();
@@ -87,7 +89,15 @@ impl TcpConnectionStrategy for ThreadPerConnection {
       // }
       //
       // let request = decode(raw_request);
-      let request = protocol_parser.decode().unwrap();
+      let request = match protocol_parser.decode() {
+        Ok(request) => request,
+        Err(crate::protocol::Error::Disconnected) => {
+          return;
+        }
+        Err(_) => {
+          break;
+        }
+      };
 
       println!("Request: {:?}", request);
       let (sender_to_client, receiver_from_handler) = channel();
@@ -95,14 +105,15 @@ impl TcpConnectionStrategy for ThreadPerConnection {
       sender_to_handler.send((request, sender_to_client)).unwrap();
 
       while let Ok(response) = receiver_from_handler.recv() {
-        let response_buffer = encode(response);
-        match stream.write_all(&response_buffer) {
-          Ok(_) => continue,
-          Err(_) => return,
-        }
+        // let response_buffer = encode(response);
+        // match stream.write_all(&response_buffer) {
+        //   Ok(_) => continue,
+        //   Err(_) => return,
+        // }
+        protocol_parser.encode(response).unwrap();
       }
 
-      stream.flush().unwrap();
+      // stream.flush().unwrap();
     });
 
     Ok(())

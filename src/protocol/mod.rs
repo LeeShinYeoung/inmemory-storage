@@ -1,9 +1,8 @@
-mod bytes;
 mod error;
+mod stream;
 pub use error::*;
 
-pub use self::bytes::BufferedBytes;
-
+pub use self::stream::BufferedStream;
 
 #[derive(Debug)]
 pub enum Method {
@@ -88,19 +87,27 @@ pub fn encode(response: Response) -> [u8; 512] {
   buffer
 }
 pub struct ProtocolParser {
-  pub(crate) bytes: BufferedBytes,
+  pub(crate) stream: BufferedStream,
 }
 impl ProtocolParser {
-  pub fn encode(&mut self, response: Response) {
+  pub fn encode(&mut self, response: Response) -> Result<()> {
     //TODO: serialize response and write buffer to stream
+
+    self.stream.write(&[response.code as u8])?;
+    self
+      .stream
+      .write(&(response.value.len() as u32).to_be_bytes())?;
+    self.stream.write(&response.value)?;
+
+    self.stream.flush()
   }
 
   pub fn decode(&mut self) -> Result<Request> {
-    let method = self.bytes.read()?;
-    let key_size = self.bytes.read()?;
-    let key = self.bytes.read_n(key_size as usize)?;
-    let value_len = self.bytes.read_u32()?;
-    let value = self.bytes.read_n(value_len as usize)?;
+    let method = self.stream.read()?;
+    let key_size = self.stream.read()?;
+    let key = self.stream.read_n(key_size as usize)?;
+    let value_len = self.stream.read_u32()?;
+    let value = self.stream.read_n(value_len as usize)?;
 
     Ok(Request {
       method: Method::try_from(method)?,

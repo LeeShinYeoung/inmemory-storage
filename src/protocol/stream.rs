@@ -18,14 +18,14 @@ impl BufferedStream {
   }
   pub fn read_n(&mut self, n: usize) -> Result<Vec<u8>> {
     while self.incoming_bytes.len() < n {
-      let mut b = Vec::with_capacity(512);
+      let mut b: [u8; 512] = [0; 512]; // Vec::with_capacity(512);
       let size = self.stream.read(b.as_mut()).map_err(Error::IO)?;
       if size == 0 {
         println!("Disconnected");
         return Err(Error::Disconnected);
       }
 
-      self.incoming_bytes.append(&mut b.drain(..size).collect());
+      self.incoming_bytes.extend_from_slice(&b[..size]);
     }
 
     Ok(self.incoming_bytes.drain(..n).collect())
@@ -36,7 +36,7 @@ impl BufferedStream {
   }
 
   pub fn read_u32(&mut self) -> Result<u32> {
-    let mut b = [0; 4];
+    let mut b: [u8; 4] = [0; 4];
     b.copy_from_slice(self.read_n(4)?.as_ref());
     Ok(u32::from_be_bytes(b))
   }

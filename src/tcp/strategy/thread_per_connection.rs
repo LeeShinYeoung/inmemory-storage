@@ -77,24 +77,14 @@ impl TcpConnectionStrategy for ThreadPerConnection {
     };
 
     self.pool.schedule(move || loop {
-      // let mut raw_request = RawRequest::new();
-      //
-      // let byte = stream
-      //   .read(&mut raw_request.value)
-      //   .expect("Failed to read from stream");
-      //
-      // if byte == 0 {
-      //   ThreadPerConnection::close_connection(&active_connection);
-      //   break;
-      // }
-      //
-      // let request = decode(raw_request);
       let request = match protocol_parser.decode() {
         Ok(request) => request,
         Err(crate::protocol::Error::Disconnected) => {
+          ThreadPerConnection::close_connection(&active_connection);
           return;
         }
-        Err(_) => {
+        Err(error) => {
+          dbg!(error);
           break;
         }
       };
@@ -105,15 +95,8 @@ impl TcpConnectionStrategy for ThreadPerConnection {
       sender_to_handler.send((request, sender_to_client)).unwrap();
 
       while let Ok(response) = receiver_from_handler.recv() {
-        // let response_buffer = encode(response);
-        // match stream.write_all(&response_buffer) {
-        //   Ok(_) => continue,
-        //   Err(_) => return,
-        // }
         protocol_parser.encode(response).unwrap();
       }
-
-      // stream.flush().unwrap();
     });
 
     Ok(())

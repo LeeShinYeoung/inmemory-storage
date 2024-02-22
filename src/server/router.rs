@@ -32,7 +32,7 @@ impl RequestRouter {
         storage.put(
           String::from_utf8(key.clone()).unwrap(),
           value.clone(),
-          Some(10000),
+          Some(100000),
         );
         Ok(vec![1])
       }

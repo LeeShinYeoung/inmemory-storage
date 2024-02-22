@@ -40,3 +40,7 @@
 | Code         | 1byte | 0x00 Success, 0x01 Fail |
 | Value Length | 4byte |                         |
 | Value        | -     | GET Only                |
+
+- echo -e "\x00\x02hi\x00\x00\x00\x00" > request-get.bin
+- echo -e "\x01\x02hi\x00\x00\x00\x03wow" > request-set.bin
+- echo -e "\x02\x02hi\x00\x00\x00\x00" > request-delete.bin

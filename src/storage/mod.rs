@@ -16,6 +16,7 @@ use self::strategy::{
   fifo::FirstInFirstOut, lru::LeastRecentUsed, simple::Simple, ttl::TimeToLive, Page, Strategy,
 };
 
+#[derive(Debug, Clone)]
 pub enum MaxMemoryStrategy {
   Simple,
   LeastRecentUsed,

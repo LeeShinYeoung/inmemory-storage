@@ -1,5 +1,5 @@
 use std::{
-  io::{Error, ErrorKind, Read, Write},
+  io::{Error, ErrorKind},
   net::TcpStream,
   sync::{
     mpsc::{channel, Sender},
@@ -7,9 +7,9 @@ use std::{
   },
 };
 
-use crate::protocol::{BufferedStream, ProtocolParser, RawRequest};
+use crate::protocol::{BufferedStream, ProtocolParser};
 use crate::{
-  protocol::{decode, encode, Request, Response},
+  protocol::{Request, Response},
   storage::size,
   thread_pool::ThreadPool,
 };
@@ -64,7 +64,7 @@ impl ThreadPerConnection {
 impl TcpConnectionStrategy for ThreadPerConnection {
   fn handle(
     &self,
-    mut stream: TcpStream,
+    stream: TcpStream,
     sender_to_handler: Sender<(Request, Sender<Response>)>,
   ) -> std::io::Result<()> {
     let active_connection = Arc::clone(&self.active_connections);

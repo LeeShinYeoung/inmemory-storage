@@ -32,6 +32,7 @@
 | Key          | -     |                                 |
 | Value Length | 4byte | SET Only                        |
 | Value        | -     | SET Only                        |
+| TTL(ms)      | 4byte | SET Only TTL=0 => NONE          |
 
 **Response Message**
 

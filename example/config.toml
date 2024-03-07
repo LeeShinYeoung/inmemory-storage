@@ -1,0 +1,2 @@
+max_memory_size = 123
+max_memory_strategy = "Simple"

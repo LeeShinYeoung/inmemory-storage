@@ -5,29 +5,63 @@ pub use error::*;
 pub use self::stream::BufferedStream;
 
 #[derive(Debug)]
-pub enum Method {
-  Get,
-  Set,
-  Delete,
+pub enum Request {
+  Get(GetRequest),
+  Set(SetRequest),
+  Delete(DeleteRequest),
 }
-impl TryFrom<u8> for Method {
-  type Error = Error;
-  fn try_from(value: u8) -> std::prelude::v1::Result<Self, Self::Error> {
-    match value {
-      0 => Ok(Self::Get),
-      1 => Ok(Self::Set),
-      2 => Ok(Self::Delete),
-      _ => Err(Error::InvalidMethod),
-    }
+
+trait Decodable
+where
+  Self: Sized,
+{
+  fn decode(stream: &BufferedStream) -> Result<Self>;
+}
+
+#[derive(Debug)]
+struct GetRequest {
+  key: Vec<u8>,
+}
+
+impl Decodable for GetRequest {
+  fn decode(stream: &BufferedStream) -> Result<Self> {
+    let key_size = stream.read()?;
+    let key = stream.read_n(key_size as usize)?;
+    Ok(Self { key })
   }
 }
 
 #[derive(Debug)]
-pub struct Request {
-  pub method: Method,
+struct SetRequest {
   pub key: Vec<u8>,
   pub value: Vec<u8>,
   pub ttl: Option<u64>,
+}
+
+impl Decodable for SetRequest {
+  fn decode(stream: &BufferedStream) -> Result<Self> {
+    let key_size = stream.read()?;
+    let key = stream.read_n(key_size as usize)?;
+    let value_len = stream.read_u32()?;
+    let value = stream.read_n(value_len as usize)?;
+    let ttl = match stream.read_u32()? {
+      0 => None,
+      i => Some(i as u64),
+    };
+    Ok(Self { key, value, ttl })
+  }
+}
+#[derive(Debug)]
+struct DeleteRequest {
+  key: Vec<u8>,
+}
+
+impl Decodable for DeleteRequest {
+  fn decode(stream: &BufferedStream) -> Result<Self> {
+    let key_size = stream.read()?;
+    let key = stream.read_n(key_size as usize)?;
+    Ok(Self { key })
+  }
 }
 
 #[derive(Debug)]
@@ -60,20 +94,12 @@ impl ProtocolParser {
 
   pub fn decode(&mut self) -> Result<Request> {
     let method = self.stream.read()?;
-    let key_size = self.stream.read()?;
-    let key = self.stream.read_n(key_size as usize)?;
-    let value_len = self.stream.read_u32()?;
-    let value = self.stream.read_n(value_len as usize)?;
-    let ttl = match self.stream.read_u32()? {
-      0 => None,
-      i => Some(i as u64),
-    };
 
-    Ok(Request {
-      method: Method::try_from(method)?,
-      key,
-      value,
-      ttl,
+    Ok(match method {
+      0 => Request::Get(GetRequest::decode(&self.stream)?),
+      1 => Request::Set(SetRequest::decode(&self.stream)?),
+      2 => Request::Delete(DeleteRequest::decode(&self.stream)?),
+      _ => todo!(),
     })
   }
 }

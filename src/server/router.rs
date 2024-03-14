@@ -1,4 +1,4 @@
-use crate::protocol::{Error, Method, Request, Response, ResponseCode, Result};
+use crate::protocol::{Error, Request, Response, ResponseCode, Result};
 use crate::storage::{MaxMemoryStrategy, Storage};
 
 pub struct RequestRouter {
@@ -33,12 +33,12 @@ impl RequestRouter {
     let key = String::from_utf8_lossy(&key).to_string();
 
     let result = match method {
-      Method::Get => storage.get(&key).map_err(Error::IO),
-      Method::Set => {
+      Request::Get => storage.get(&key).map_err(Error::IO),
+      Request::Set => {
         storage.put(key, value.clone(), ttl).map_err(Error::IO)?;
         Ok(vec![])
       }
-      Method::Delete => {
+      Request::Delete => {
         storage.del(&key).map_err(Error::IO)?;
         Ok(vec![])
       }

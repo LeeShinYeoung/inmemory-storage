@@ -16,9 +16,9 @@
         - [x] LRU
       - [x] TTL
     - [x] Double Linked List + HaspMap
-- [ ] Settings
-  - [ ] settings.toml
-  - [ ] Setting parser
+- [x] Settings
+  - [x] settings.toml
+  - [x] Setting parser
 - [ ] Client
 
 ### Protocol
@@ -42,6 +42,6 @@
 | Value Length | 4byte |                         |
 | Value        | -     | GET Only                |
 
-- echo -e "\x00\x02hi\x00\x00\x00\x00" > request-get.bin
-- echo -e "\x01\x02hi\x00\x00\x00\x03wow" > request-set.bin
-- echo -e "\x02\x02hi\x00\x00\x00\x00" > request-delete.bin
+- echo -e "\x00\x02hi\x00\x00\x00\x00\x00\x00\x00\x00" > request-get.bin
+- echo -e "\x01\x02hi\x00\x00\x00\x03wow\x00\x00\x4e\x20" > request-set.bin
+- echo -e "\x02\x02hi\x00\x00\x00\x00\x00\x00\x00\x00" > request-delete.bin

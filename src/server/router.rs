@@ -1,4 +1,4 @@
-use crate::protocol::{Error, Request, Response, ResponseCode, Result};
+use crate::protocol::{DeleteRequest, Error, GetRequest, Request, Response, Result, SetRequest};
 use crate::storage::{MaxMemoryStrategy, Storage};
 
 pub struct RequestRouter {
@@ -13,40 +13,34 @@ impl RequestRouter {
   }
 
   pub fn handle(&mut self, request: Request) -> Result<Response> {
-    let Request {
-      method,
-      key,
-      value,
-      ttl,
-    } = request;
+    match request {
+      Request::Get(request) => self.get(request),
+      Request::Set(request) => self.set(request),
+      Request::Delete(request) => self.delete(request),
+    }
+  }
 
-    println!("method: {:?}", &method);
-    println!("key: {:?}", String::from_utf8_lossy(&key));
-    println!(
-      "value: {:?}, length: {}",
-      String::from_utf8_lossy(&value),
-      &value.len()
-    );
+  fn get(&mut self, req: GetRequest) -> Result<Response> {
+    self
+      .storage
+      .get(&req.key)
+      .map(|result| Response::success(result))
+      .map_err(Error::IO)
+  }
 
-    let storage = &mut self.storage;
+  fn set(&mut self, req: SetRequest) -> Result<Response> {
+    self
+      .storage
+      .put(req.key, req.value, req.ttl)
+      .map(|_| Response::success(Default::default()))
+      .map_err(Error::IO)
+  }
 
-    let key = String::from_utf8_lossy(&key).to_string();
-
-    let result = match method {
-      Request::Get => storage.get(&key).map_err(Error::IO),
-      Request::Set => {
-        storage.put(key, value.clone(), ttl).map_err(Error::IO)?;
-        Ok(vec![])
-      }
-      Request::Delete => {
-        storage.del(&key).map_err(Error::IO)?;
-        Ok(vec![])
-      }
-    }?;
-
-    Ok(Response {
-      code: ResponseCode::Success,
-      value: result,
-    })
+  fn delete(&mut self, req: DeleteRequest) -> Result<Response> {
+    self
+      .storage
+      .del(&req.key)
+      .map(|_| Response::success(Default::default()))
+      .map_err(Error::IO)
   }
 }

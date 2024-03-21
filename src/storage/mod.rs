@@ -1,6 +1,9 @@
 mod list;
 pub mod size;
 
+mod key;
+pub use key::*;
+
 pub mod strategy;
 
 use std::{
@@ -48,7 +51,7 @@ impl Storage {
     s
   }
 
-  pub fn get(&mut self, key: &str) -> Result<Vec<u8>> {
+  pub fn get(&mut self, key: &Key) -> Result<Vec<u8>> {
     if let Some(page) = {
       let mut s = self.strategy.lock().unwrap();
       s.get(key).map(|page| page.clone())
@@ -64,7 +67,7 @@ impl Storage {
     return Err(Error::from(ErrorKind::NotFound));
   }
 
-  pub fn put(&mut self, key: String, value: Vec<u8>, ttl: Option<u64>) -> Result<()> {
+  pub fn put(&mut self, key: Key, value: Vec<u8>, ttl: Option<u64>) -> Result<()> {
     if self.max_size < value.len() {
       return Err(Error::from(ErrorKind::OutOfMemory));
     }
@@ -99,7 +102,7 @@ impl Storage {
     return Ok(());
   }
 
-  pub fn del(&mut self, key: &str) -> Result<()> {
+  pub fn del(&mut self, key: &Key) -> Result<()> {
     let mut s = self.strategy.lock().unwrap();
     let mut a = self.allocated.lock().unwrap();
     *a -= s.deallocate(&key).map(|old| old.size()).unwrap_or(0);
@@ -112,7 +115,7 @@ impl Storage {
     spawn(move || loop {
       sleep(Duration::from_millis(100));
       loop {
-        let keys: Vec<String> = {
+        let keys: Vec<Key> = {
           let s = c.lock().unwrap();
           let iter = s.iter();
           if iter.len() == 0 {

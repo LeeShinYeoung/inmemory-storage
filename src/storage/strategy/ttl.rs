@@ -3,10 +3,12 @@ use std::{
   time::SystemTime,
 };
 
+use crate::storage::Key;
+
 use super::{Page, Strategy};
 
 pub struct TimeToLive {
-  table: Box<HashMap<String, Page>>,
+  table: Box<HashMap<Key, Page>>,
   queue: Box<BinaryHeap<Item>>,
 }
 impl Strategy for TimeToLive {
@@ -20,22 +22,22 @@ impl Strategy for TimeToLive {
     }
   }
 
-  fn get(&mut self, key: &str) -> Option<&Page> {
+  fn get(&mut self, key: &Key) -> Option<&Page> {
     self.table.get(key)
   }
 
-  fn allocate(&mut self, key: String, page: Page) -> Option<Page> {
+  fn allocate(&mut self, key: Key, page: Page) -> Option<Page> {
     if let Some(ex) = page.expired_at() {
       self.queue.push(Item::new(key.to_owned(), ex));
     }
     self.table.insert(key, page)
   }
 
-  fn deallocate(&mut self, key: &str) -> Option<Page> {
+  fn deallocate(&mut self, key: &Key) -> Option<Page> {
     self.table.remove(key)
   }
 
-  fn evict(&mut self) -> Option<String> {
+  fn evict(&mut self) -> Option<Key> {
     while let Some(item) = self.queue.pop() {
       if let Some(page) = self.table.get(&item.key) {
         if page.is_expired() {
@@ -53,17 +55,17 @@ impl Strategy for TimeToLive {
     return None;
   }
 
-  fn iter(&self) -> Box<dyn ExactSizeIterator<Item = (&String, &Page)> + '_> {
+  fn iter(&self) -> Box<dyn ExactSizeIterator<Item = (&Key, &Page)> + '_> {
     Box::new(self.table.iter())
   }
 }
 
 struct Item {
   expired_at: SystemTime,
-  key: String,
+  key: Key,
 }
 impl Item {
-  fn new(key: String, expired_at: SystemTime) -> Self {
+  fn new(key: Key, expired_at: SystemTime) -> Self {
     Self { expired_at, key }
   }
 }

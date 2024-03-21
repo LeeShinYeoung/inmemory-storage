@@ -3,6 +3,8 @@ use std::{
   time::{Duration, SystemTime},
 };
 
+use super::Key;
+
 pub mod fifo;
 pub mod lru;
 pub mod simple;
@@ -12,11 +14,11 @@ pub trait Strategy: Send + Sync {
   fn new() -> Self
   where
     Self: Sized;
-  fn get(&mut self, key: &str) -> Option<&Page>;
-  fn allocate(&mut self, key: String, page: Page) -> Option<Page>;
-  fn deallocate(&mut self, key: &str) -> Option<Page>;
-  fn evict(&mut self) -> Option<String>;
-  fn iter(&self) -> Box<dyn ExactSizeIterator<Item = (&String, &Page)> + '_>;
+  fn get(&mut self, key: &Key) -> Option<&Page>;
+  fn allocate(&mut self, key: Key, page: Page) -> Option<Page>;
+  fn deallocate(&mut self, key: &Key) -> Option<Page>;
+  fn evict(&mut self) -> Option<Key>;
+  fn iter(&self) -> Box<dyn ExactSizeIterator<Item = (&Key, &Page)> + '_>;
 }
 
 #[derive(Clone, Debug)]

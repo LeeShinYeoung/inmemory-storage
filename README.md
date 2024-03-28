@@ -16,10 +16,21 @@
                 - [x] LRU
             - [x] TTL
         - [x] Double Linked List + HaspMap
+- [] Authentication / Authorization
+    - [ ] User
+        - [ ] Storage
+        - [ ] Role
+    - [ ] 
 - [x] Settings
     - [x] settings.toml
     - [x] Setting parser
-- [ ] Client
+    - [ ] Client
+        - [ ] cli (github release, apt, yum, homebrew)
+        - [ ] rust (crates)
+        - [ ] nodejs (npm)
+        - [ ] java (gradle)
+        - [ ] go (github)
+        - [ ] python (pip)
 
 ### Protocol
 

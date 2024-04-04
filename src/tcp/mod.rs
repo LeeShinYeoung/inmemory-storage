@@ -29,7 +29,11 @@ impl TcpServer {
     let address = format!("{}:{}", host, port);
     let listener = TcpListener::bind(address)?;
 
-    for stream in listener.incoming() {
+    // TODO
+    // let ip_whitelist
+    // let ip_blacklist
+
+    for (stream, addr) in listener.accept() {
       let sender_to_handler = sender_to_handler.clone();
       if let Err(error) = self.config.strategy.handle(stream?, sender_to_handler) {
         println!("Error: {}", error);

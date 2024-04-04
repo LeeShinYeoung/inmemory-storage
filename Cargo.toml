@@ -9,3 +9,4 @@ edition = "2021"
 rand = "0.8.5"
 toml = "0.8.10"
 serde = { version = "1.0.197", features = ["derive"] }
+ipnet = "2.9.0"

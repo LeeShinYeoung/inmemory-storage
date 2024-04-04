@@ -16,13 +16,10 @@
                 - [x] LRU
             - [x] TTL
         - [x] Double Linked List + HaspMap
-- [] Authentication / Authorization
-    - [ ] User
-        - [ ] Storage
-        - [ ] Role
-    - [ ] 
-- [x] Settings
-    - [x] settings.toml
+- [x] Config
+    - [x] config.toml
+        - [x] max memory strategy / size
+        - [ ] ip whitelist / blacklist
     - [x] Setting parser
     - [ ] Client
         - [ ] cli (github release, apt, yum, homebrew)

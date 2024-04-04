@@ -1,3 +1,4 @@
+use ipnet::IpNet;
 use serde::Deserialize;
 use std::io::Read;
 use std::{fs::File, path::Path};
@@ -11,6 +12,9 @@ use crate::{
 pub struct ServerConfig {
   pub max_memory_size: usize,
   pub max_memory_strategy: MaxMemoryStrategy,
+  // TODO
+  // pub ip_whitelist: Vec<IpNet>,
+  // pub ip_blacklist: Vec<IpNet>,
 }
 
 impl ServerConfig {

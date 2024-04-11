@@ -1,3 +1,6 @@
+mod ip;
+pub use ip::*;
+
 use std::{net::TcpListener, sync::mpsc::Sender};
 
 use crate::protocol::{Request, Response};
@@ -8,7 +11,8 @@ pub mod strategy;
 
 pub struct TcpServerConfig {
   pub(crate) strategy: Box<dyn TcpConnectionStrategy>,
-  // pub sender: Sender<[u8; 512]>,
+  pub whitelist: Option<IpNetList>,
+  pub blacklist: Option<IpNetList>,
 }
 
 pub struct TcpServer {
@@ -29,17 +33,24 @@ impl TcpServer {
     let address = format!("{}:{}", host, port);
     let listener = TcpListener::bind(address)?;
 
-    // TODO
-    // let ip_whitelist
-    // let ip_blacklist
+    loop {
+      let (stream, addr) = listener.accept()?;
+      if let Some(whitelist) = &self.config.whitelist {
+        if !whitelist.contains(&addr) {
+          continue;
+        }
+      }
 
-    for (stream, addr) in listener.accept() {
+      if let Some(blacklist) = &self.config.blacklist {
+        if blacklist.contains(&addr) {
+          continue;
+        }
+      }
+
       let sender_to_handler = sender_to_handler.clone();
-      if let Err(error) = self.config.strategy.handle(stream?, sender_to_handler) {
+      if let Err(error) = self.config.strategy.handle(stream, sender_to_handler) {
         println!("Error: {}", error);
       }
     }
-
-    Ok(())
   }
 }

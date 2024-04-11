@@ -26,6 +26,8 @@ impl Server {
     Self {
       transport: TcpServer::new(TcpServerConfig {
         strategy: Box::new(ThreadPerConnection::new(5)),
+        whitelist: config.ip_whitelist.clone(),
+        blacklist: config.ip_blacklist.clone(),
       }),
       background: ThreadPool::new(5, size::mb(10)),
       config,

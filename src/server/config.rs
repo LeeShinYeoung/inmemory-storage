@@ -1,20 +1,17 @@
-use ipnet::IpNet;
 use serde::Deserialize;
 use std::io::Read;
 use std::{fs::File, path::Path};
 
-use crate::{
-  protocol::{Error, Result},
-  storage::MaxMemoryStrategy,
-};
+use crate::protocol::Error;
+use crate::tcp::IpNetList;
+use crate::{protocol::Result, storage::MaxMemoryStrategy};
 
 #[derive(Deserialize, Debug)]
 pub struct ServerConfig {
   pub max_memory_size: usize,
   pub max_memory_strategy: MaxMemoryStrategy,
-  // TODO
-  // pub ip_whitelist: Vec<IpNet>,
-  // pub ip_blacklist: Vec<IpNet>,
+  pub ip_whitelist: Option<IpNetList>,
+  pub ip_blacklist: Option<IpNetList>,
 }
 
 impl ServerConfig {
